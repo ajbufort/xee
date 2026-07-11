@@ -1230,3 +1230,62 @@ fn test_basic_iterate_params() {
         "<o><baz>1</baz><baz>2</baz><baz>4</baz></o>"
     );
 }
+
+// https://github.com/Paligo/xee/issues/127 (test cases provided in the
+// issue by bojidar-bg)
+
+#[test]
+fn test_transform_local_variable_use_twice() {
+    let mut xot = Xot::new();
+    let output = evaluate(
+        &mut xot,
+        "<doc/>",
+        r#"
+<xsl:transform xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="3">
+  <xsl:template match="/">
+    <xsl:variable name="foo" select="'B'"/>
+    <o><xsl:value-of select="($foo, $foo)"/></o>
+  </xsl:template>
+</xsl:transform>"#,
+    )
+    .unwrap();
+    // xsl:value-of with select joins with a single space by default
+    assert_eq!(xml(&xot, output), "<o>B B</o>");
+}
+
+#[test]
+fn test_let_variable_in_one_expression_does_not_leak_to_the_next() {
+    // a let-bound $foo in one attribute, then $foo in a later attribute:
+    // the second reference is undefined and must fail with XPST0008, not
+    // an internal error
+    use xee_interpreter::context::StaticContext;
+    let error = xee_xslt_compiler::parse(
+        StaticContext::default(),
+        r#"
+<xsl:transform xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="3">
+  <xsl:template match="/">
+    <o><xsl:value-of select="let $foo := 'B' return $foo"/></o>
+    <o><xsl:value-of select="$foo"/></o>
+  </xsl:template>
+</xsl:transform>"#,
+    )
+    .unwrap_err();
+    assert_eq!(error.error, xee_interpreter::error::Error::XPST0008);
+}
+
+#[test]
+fn test_let_variable_used_twice_within_one_expression() {
+    let mut xot = Xot::new();
+    let output = evaluate(
+        &mut xot,
+        "<doc/>",
+        r#"
+<xsl:transform xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="3">
+  <xsl:template match="/">
+    <o><xsl:value-of select="let $foo := 'B' return ($foo, $foo)"/></o>
+  </xsl:template>
+</xsl:transform>"#,
+    )
+    .unwrap();
+    assert_eq!(xml(&xot, output), "<o>B B</o>");
+}
