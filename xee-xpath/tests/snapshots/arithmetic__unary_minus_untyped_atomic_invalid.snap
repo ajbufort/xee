@@ -1,0 +1,16 @@
+---
+source: xee-xpath/tests/arithmetic.rs
+assertion_line: 64
+expression: "run(r#\"-(xs:untypedAtomic(\"abc\"))\"#)"
+---
+Err(
+    SpannedError {
+        error: FORG0001,
+        span: Some(
+            SourceSpan(
+                0,
+                26,
+            ),
+        ),
+    },
+)

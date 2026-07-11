@@ -1,0 +1,16 @@
+---
+source: xee-xpath/tests/arithmetic.rs
+assertion_line: 69
+expression: "run(r#\"-(\"a\")\"#)"
+---
+Err(
+    SpannedError {
+        error: XPTY0004,
+        span: Some(
+            SourceSpan(
+                0,
+                6,
+            ),
+        ),
+    },
+)
