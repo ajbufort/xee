@@ -55,12 +55,10 @@ accessor-003
 accessor-004
 accessor-005
 accessor-006
-accessor-008
 accessor-010
 accessor-013
 accessor-014
 accessor-015
-accessor-016
 accessor-020
 accessor-021
 accessor-022
@@ -1376,7 +1374,6 @@ copy-4102
 copy-4201
 copy-4301
 copy-4302
-copy-4303
 copy-4304
 copy-4305
 copy-4306
@@ -2533,8 +2530,6 @@ expression-1102
 expression-1103
 expression-1104
 expression-1601
-expression-1701
-expression-1702
 expression-1801
 expression-2001
 expression-2101
@@ -4625,9 +4620,6 @@ node-1601
 node-1802
 node-1905
 node-1906
-node-2001
-node-2002
-node-2004
 = nodetest
 nodetest-003
 nodetest-004
@@ -8157,7 +8149,6 @@ seqtor-043h
 seqtor-043i
 seqtor-101
 = sequence
-sequence-0109
 sequence-0111
 sequence-0112
 sequence-0113

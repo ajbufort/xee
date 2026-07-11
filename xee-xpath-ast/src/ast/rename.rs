@@ -40,15 +40,17 @@ impl Names {
     }
 
     fn get(&mut self, name: &Name) -> Name {
-        // this always returns a name, even if the
-        // name is unknown, in which case a unique bogus
-        // name is generated
+        // a reference to an unknown name is left untouched: it either
+        // refers to an externally provided variable (like one declared
+        // by xsl:variable) or fails later with XPST0008 under its
+        // original name; generating a fresh name here made repeated
+        // references to the same unknown variable diverge (issue #127)
         self.names
             .iter()
             .rev()
             .find(|(old_name, _)| old_name == name)
             .map(|(_, new_name)| new_name.clone())
-            .unwrap_or_else(|| self.generator.generate(name))
+            .unwrap_or_else(|| name.clone())
     }
 
     fn push_name(&mut self, name: &Name) -> Name {

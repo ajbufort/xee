@@ -147,12 +147,14 @@ impl<'a> FunctionCompiler<'a> {
                     .emit(Instruction::ClosureVar(index as u16), span);
                 Ok(())
             } else {
-                // TODO: this should be unreachable but
-                // the XSLT test suite for some reason triggers
-                // this condition, so for now we've hacked our way
-                // around it
-                Err(Error::Unsupported(String::from("Internal bug: variable not found?")).into())
-                // unreachable!("variable not found: {:?}", name);
+                // a variable that is in no scope at all is undeclared;
+                // this is reachable from XSLT, where each XPath attribute
+                // is parsed separately and a reference can name a
+                // variable that nothing binds (issue #127). Note that a
+                // compiler bug that loses a real binding would also
+                // surface here, now as XPST0008 instead of an internal
+                // error.
+                Err(Error::XPST0008.with_span(span))
             }
         }
     }
