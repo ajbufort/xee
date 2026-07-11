@@ -21,12 +21,14 @@ pub(crate) fn cast_binary_compare(
     cast_binary(a, b)
 }
 
-fn cast_untyped_arithmetic(value: atomic::Atomic) -> error::Result<atomic::Atomic> {
+pub(crate) fn cast_untyped_arithmetic(value: atomic::Atomic) -> error::Result<atomic::Atomic> {
     // https://www.w3.org/TR/xpath-31/#id-arithmetic
     // 4: If an atomized operand of of type xs:untypedAtomic, it is cast
     // to xs:double
     if let atomic::Atomic::Untyped(s) = value {
-        atomic::Atomic::parse_atomic::<f64>(&s)
+        // as a real cast to xs:double, including the whiteSpace collapse
+        // facet, so xs:untypedAtomic("  3  ") is a valid operand
+        atomic::Atomic::parse_atomic::<f64>(s.trim())
     } else {
         Ok(value)
     }

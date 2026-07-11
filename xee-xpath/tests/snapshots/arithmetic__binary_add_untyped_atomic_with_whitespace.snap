@@ -1,0 +1,16 @@
+---
+source: xee-xpath/tests/arithmetic.rs
+assertion_line: 81
+expression: "run(r#\"xs:untypedAtomic(\"  4  \") + 1\"#)"
+---
+Ok(
+    One(
+        One {
+            item: Atomic(
+                Double(
+                    5.0,
+                ),
+            ),
+        },
+    ),
+)
