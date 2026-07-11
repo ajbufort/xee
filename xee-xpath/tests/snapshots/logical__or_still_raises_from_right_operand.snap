@@ -1,0 +1,16 @@
+---
+source: xee-xpath/tests/logical.rs
+assertion_line: 29
+expression: "run(\"false() or error()\")"
+---
+Err(
+    SpannedError {
+        error: FOER0000,
+        span: Some(
+            SourceSpan(
+                11,
+                18,
+            ),
+        ),
+    },
+)

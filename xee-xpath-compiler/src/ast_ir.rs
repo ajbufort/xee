@@ -345,17 +345,79 @@ impl<'a> IrConverter<'a> {
     }
 
     fn binary_expr(&mut self, ast: &ast::BinaryExpr, span: Span) -> error::SpannedResult<Bindings> {
+        match ast.operator {
+            // and/or lower to conditionals so the right operand is only
+            // evaluated when the left operand doesn't already determine
+            // the result; XPath 3.1 section 3.8.1 permits this
+            ast::BinaryOperator::And => self.logical_expr(ast, false),
+            ast::BinaryOperator::Or => self.logical_expr(ast, true),
+            _ => {
+                let mut left_bindings = self.path_expr(&ast.left)?;
+                let mut right_bindings = self.path_expr(&ast.right)?;
+                let op = self.binary_op(ast.operator);
+                let expr = ir::Expr::Binary(ir::Binary {
+                    left: left_bindings.atom(),
+                    op,
+                    right: right_bindings.atom(),
+                });
+                let binding = self.variables.new_binding(expr, span);
+
+                Ok(left_bindings.concat(right_bindings).bind(binding))
+            }
+        }
+    }
+
+    // `or` short-circuits when the left operand is true, `and` when it is
+    // false: `a or b` is `if (a) then true else ebv(b)` and `a and b` is
+    // `if (a) then ebv(b) else false`. XPath 3.1 section 3.8.1 permits
+    // only evaluating the right operand when the left doesn't decide it.
+    fn logical_expr(
+        &mut self,
+        ast: &ast::BinaryExpr,
+        is_or: bool,
+    ) -> error::SpannedResult<Bindings> {
         let mut left_bindings = self.path_expr(&ast.left)?;
         let mut right_bindings = self.path_expr(&ast.right)?;
-        let op = self.binary_op(ast.operator);
-        let expr = ir::Expr::Binary(ir::Binary {
-            left: left_bindings.atom(),
-            op,
-            right: right_bindings.atom(),
+        // the right operand reduced to its effective boolean value, as a
+        // self-contained expression that only runs inside a branch; the
+        // If condition applies the effective boolean value rules. Its
+        // binding carries the operand's own span so an effective boolean
+        // value error points at the operand, not the whole expression.
+        let right_atom = right_bindings.atom();
+        let right_span = right_atom.span;
+        let right_if = ir::Expr::If(ir::If {
+            condition: right_atom,
+            then: Box::new(self.boolean_expr(true, right_span)),
+            else_: Box::new(self.boolean_expr(false, right_span)),
         });
-        let binding = self.variables.new_binding(expr, span);
+        let right_binding = self.variables.new_binding(right_if, right_span);
+        let right_ebv = right_bindings.bind(right_binding).expr();
+        let left_atom = left_bindings.atom();
+        let left_span = left_atom.span;
+        let (then, else_) = if is_or {
+            (self.boolean_expr(true, left_span), right_ebv)
+        } else {
+            (right_ebv, self.boolean_expr(false, left_span))
+        };
+        let expr = ir::Expr::If(ir::If {
+            condition: left_atom,
+            then: Box::new(then),
+            else_: Box::new(else_),
+        });
+        // the outer condition applies the effective boolean value to the
+        // left operand, so its binding uses the left operand's span
+        let binding = self.variables.new_binding(expr, left_span);
+        Ok(left_bindings.bind(binding))
+    }
 
-        Ok(left_bindings.concat(right_bindings).bind(binding))
+    fn boolean_expr(&mut self, value: bool, span: Span) -> ir::ExprS {
+        Spanned::new(
+            ir::Expr::Atom(Spanned::new(
+                ir::Atom::Const(ir::Const::Boolean(value)),
+                span,
+            )),
+            span,
+        )
     }
 
     fn binary_op(&mut self, operator: ast::BinaryOperator) -> ir::BinaryOperator {

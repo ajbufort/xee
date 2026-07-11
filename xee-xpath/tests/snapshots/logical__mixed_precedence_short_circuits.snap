@@ -1,0 +1,16 @@
+---
+source: xee-xpath/tests/logical.rs
+assertion_line: 75
+expression: "run(\"true() or false() and error()\")"
+---
+Ok(
+    One(
+        One {
+            item: Atomic(
+                Boolean(
+                    true,
+                ),
+            ),
+        },
+    ),
+)

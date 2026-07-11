@@ -73,6 +73,7 @@ pub enum Const {
     String(String),
     Double(OrderedFloat<f64>),
     Decimal(Decimal),
+    Boolean(bool),
     StaticFunctionReference(StaticFunctionId, Option<ContextNames>),
     // XXX replace this with a sequence constant? useful once we have constant folding
     EmptySequence,
