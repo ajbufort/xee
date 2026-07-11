@@ -22,7 +22,7 @@ use crate::stack;
 use crate::xml;
 use crate::{error, pattern};
 
-use super::instruction::{read_i16, read_instruction, read_u16, read_u8, EncodedInstruction};
+use super::instruction::{read_i32, read_instruction, read_u16, read_u8, EncodedInstruction};
 use super::runnable::Runnable;
 use super::state::State;
 
@@ -211,21 +211,21 @@ impl<'a> Interpreter<'a> {
                     self.state.push(item);
                 }
                 EncodedInstruction::Jump => {
-                    let displacement = self.read_i16();
-                    self.state.jump(displacement as i32);
+                    let displacement = self.read_i32();
+                    self.state.jump(displacement);
                 }
                 EncodedInstruction::JumpIfTrue => {
-                    let displacement = self.read_i16();
+                    let displacement = self.read_i32();
                     let a = self.pop_effective_boolean()?;
                     if a {
-                        self.state.jump(displacement as i32);
+                        self.state.jump(displacement);
                     }
                 }
                 EncodedInstruction::JumpIfFalse => {
-                    let displacement = self.read_i16();
+                    let displacement = self.read_i32();
                     let a = self.pop_effective_boolean()?;
                     if !a {
-                        self.state.jump(displacement as i32);
+                        self.state.jump(displacement);
                     }
                 }
                 EncodedInstruction::Eq => {
@@ -1273,11 +1273,11 @@ impl<'a> Interpreter<'a> {
         read_u16(chunk, &mut frame.ip)
     }
 
-    fn read_i16(&mut self) -> i16 {
+    fn read_i32(&mut self) -> i32 {
         let frame = &mut self.state.frame_mut();
         let function = self.runnable.program().inline_function(frame.function());
         let chunk = &function.chunk;
-        read_i16(chunk, &mut frame.ip)
+        read_i32(chunk, &mut frame.ip)
     }
 
     fn read_u8(&mut self) -> u8 {

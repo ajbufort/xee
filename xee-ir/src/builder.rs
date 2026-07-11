@@ -7,6 +7,11 @@ use xee_interpreter::{context, function, interpreter, sequence, span, xml};
 
 use crate::ir;
 
+/// Encoded size in bytes of a jump instruction: one opcode byte plus a
+/// 4-byte i32 displacement. Backward-jump and patch offsets are computed
+/// relative to this size.
+const JUMP_SIZE: usize = 5;
+
 #[must_use]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub(crate) struct ForwardJumpRef(usize);
@@ -117,19 +122,20 @@ impl<'a> FunctionBuilder<'a> {
         condition: JumpCondition,
         span: span::SourceSpan,
     ) {
-        let current = self.compiled.len() + 3;
+        let current = self.compiled.len() + JUMP_SIZE;
         let offset = current - jump_ref.0;
         if jump_ref.0 > current {
             panic!("cannot jump forward");
         }
-        if offset > (u16::MAX as usize) {
+        if offset > (i32::MAX as usize) {
             panic!("jump too far");
         }
+        let offset = offset as i32;
 
         match condition {
-            JumpCondition::True => self.emit(Instruction::JumpIfTrue(-(offset as i16)), span),
-            JumpCondition::False => self.emit(Instruction::JumpIfFalse(-(offset as i16)), span),
-            JumpCondition::Always => self.emit(Instruction::Jump(-(offset as i16)), span),
+            JumpCondition::True => self.emit(Instruction::JumpIfTrue(-offset), span),
+            JumpCondition::False => self.emit(Instruction::JumpIfFalse(-offset), span),
+            JumpCondition::Always => self.emit(Instruction::Jump(-offset), span),
         }
     }
 
@@ -152,13 +158,15 @@ impl<'a> FunctionBuilder<'a> {
         if jump_ref.0 > current {
             panic!("can only patch forward jumps");
         }
-        let offset = current - jump_ref.0 - 3; // 3 for size of the jump
-        if offset > (u16::MAX as usize) {
+        let offset = current - jump_ref.0 - JUMP_SIZE;
+        if offset > (i32::MAX as usize) {
             panic!("jump too far");
         }
-        let offset_bytes = offset.to_le_bytes();
+        let offset_bytes = (offset as i32).to_le_bytes();
         self.compiled[jump_ref.0 + 1] = offset_bytes[0];
         self.compiled[jump_ref.0 + 2] = offset_bytes[1];
+        self.compiled[jump_ref.0 + 3] = offset_bytes[2];
+        self.compiled[jump_ref.0 + 4] = offset_bytes[3];
     }
 
     pub(crate) fn finish(

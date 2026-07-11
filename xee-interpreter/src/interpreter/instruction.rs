@@ -42,9 +42,9 @@ pub enum Instruction {
     Union,
     Intersect,
     Except,
-    Jump(i16),
-    JumpIfTrue(i16),
-    JumpIfFalse(i16),
+    Jump(i32),
+    JumpIfTrue(i32),
+    JumpIfFalse(i32),
     Call(u8),
     Lookup,
     WildcardLookup,
@@ -221,16 +221,16 @@ pub(crate) fn decode_instruction(bytes: &[u8]) -> (Instruction, usize) {
         EncodedInstruction::Intersect => (Instruction::Intersect, 1),
         EncodedInstruction::Except => (Instruction::Except, 1),
         EncodedInstruction::Jump => {
-            let displacement = i16::from_le_bytes([bytes[1], bytes[2]]);
-            (Instruction::Jump(displacement), 3)
+            let displacement = i32::from_le_bytes([bytes[1], bytes[2], bytes[3], bytes[4]]);
+            (Instruction::Jump(displacement), 5)
         }
         EncodedInstruction::JumpIfTrue => {
-            let displacement = i16::from_le_bytes([bytes[1], bytes[2]]);
-            (Instruction::JumpIfTrue(displacement), 3)
+            let displacement = i32::from_le_bytes([bytes[1], bytes[2], bytes[3], bytes[4]]);
+            (Instruction::JumpIfTrue(displacement), 5)
         }
         EncodedInstruction::JumpIfFalse => {
-            let displacement = i16::from_le_bytes([bytes[1], bytes[2]]);
-            (Instruction::JumpIfFalse(displacement), 3)
+            let displacement = i32::from_le_bytes([bytes[1], bytes[2], bytes[3], bytes[4]]);
+            (Instruction::JumpIfFalse(displacement), 5)
         }
         EncodedInstruction::Call => {
             let arity = bytes[1];
@@ -520,15 +520,15 @@ pub fn instruction_size(instruction: &Instruction) -> usize {
         | Instruction::Var(_)
         | Instruction::Set(_)
         | Instruction::ClosureVar(_)
-        | Instruction::Jump(_)
-        | Instruction::JumpIfTrue(_)
         | Instruction::Step(_)
         | Instruction::Cast(_)
         | Instruction::Castable(_)
         | Instruction::InstanceOf(_)
         | Instruction::Treat(_)
-        | Instruction::ReturnConvert(_)
-        | Instruction::JumpIfFalse(_) => 3,
+        | Instruction::ReturnConvert(_) => 3,
+        // the displacement is a 4-byte i32 so branch bodies larger than
+        // 32KB of bytecode don't overflow the offset
+        Instruction::Jump(_) | Instruction::JumpIfTrue(_) | Instruction::JumpIfFalse(_) => 5,
         Instruction::ApplyTemplates(_) => 3,
     }
 }
@@ -545,10 +545,10 @@ pub(crate) fn read_u16(bytes: &[u8], ip: &mut usize) -> u16 {
     u16::from_le_bytes([bytes[0], bytes[1]])
 }
 
-pub(crate) fn read_i16(bytes: &[u8], ip: &mut usize) -> i16 {
-    let bytes = &bytes[*ip..*ip + 2];
-    *ip += 2;
-    i16::from_le_bytes([bytes[0], bytes[1]])
+pub(crate) fn read_i32(bytes: &[u8], ip: &mut usize) -> i32 {
+    let bytes = &bytes[*ip..*ip + 4];
+    *ip += 4;
+    i32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]])
 }
 
 pub(crate) fn read_u8(bytes: &[u8], ip: &mut usize) -> u8 {
