@@ -1,10 +1,11 @@
 ---
-source: xee-xpath-compiler/tests/xpath.rs
+source: xee-xpath/tests/xpath.rs
+assertion_line: 888
 expression: "run(\"'foo:bar' cast as xs:QName\")"
 ---
 Err(
     SpannedError {
-        error: FORG0001,
+        error: FONS0004,
         span: Some(
             SourceSpan(
                 0,

@@ -1230,7 +1230,6 @@ parse-xml-fragment-015
 = fn-path
 = fn-position
 = fn-prefix-from-QName
-fn-prefix-from-qname-8
 = fn-random-number-generator
 = fn-remove
 = fn-replace

@@ -1,7 +1,7 @@
 use regexml::Regex;
 use std::sync::LazyLock;
 
-use xee_xpath_ast::parse_name;
+use xee_xpath_ast::{parse_name, ParserError};
 
 use crate::atomic;
 use crate::context;
@@ -162,10 +162,23 @@ impl atomic::Atomic {
                             ))
                         }
                     }
-                    // TODO: We really want to distinguish between parse errors
-                    // and namespace lookup errors, which should be a FONS0004 error
-                    // This requires the parser to be modified so it retains that
-                    // information.
+                    // the parser reports an unresolvable prefix as its
+                    // own error variant; in a cast that is FONS0004,
+                    // provided the whole value is lexically a QName
+                    // (UnknownPrefix is also reported for values with
+                    // trailing content after a valid name, which are
+                    // FORG0001)
+                    Err(ParserError::UnknownPrefix { .. }) => {
+                        let s = whitespace_collapse(&s);
+                        let is_lexical_qname = s.split_once(':').is_some_and(|(prefix, local)| {
+                            NC_NAME_REGEX.is_match(prefix) && NC_NAME_REGEX.is_match(local)
+                        });
+                        if is_lexical_qname {
+                            Err(error::Error::FONS0004)
+                        } else {
+                            Err(error::Error::FORG0001)
+                        }
+                    }
                     Err(_) => Err(error::Error::FORG0001),
                 }
             }
